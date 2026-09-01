@@ -169,6 +169,8 @@ def main():
             "No FCST - Overstock": ("#F3E8FF", "#6B21A8"),
         }
 
+        total_distinct = filtered_df['PRODUCT_FULL_SEGMENTS_NUMBER'].nunique()
+
         status_cols = st.columns(len(present_statuses) + 1)
         with status_cols[0]:
             all_active = st.session_state["overview_status_filter"] is None
@@ -176,7 +178,7 @@ def main():
             st.markdown(
                 f"<div style='text-align:center; padding:8px; border-radius:8px; {border_style} cursor:pointer;'>"
                 f"<div style='font-size:0.8rem; color:#666;'>All</div>"
-                f"<div style='font-size:1.5rem; font-weight:bold;'>{filtered_df['PRODUCT_FULL_SEGMENTS_NUMBER'].nunique():,}</div></div>",
+                f"<div style='font-size:1.5rem; font-weight:bold;'>{total_distinct:,}</div></div>",
                 unsafe_allow_html=True,
             )
             if st.button("All", key="status_filter_all", use_container_width=True):
@@ -192,7 +194,8 @@ def main():
                 st.markdown(
                     f"<div style='text-align:center; padding:8px; border-radius:8px; background:{bg}; {border_style}'>"
                     f"<div style='font-size:0.8rem; color:{fg};'>{status}</div>"
-                    f"<div style='font-size:1.5rem; font-weight:bold; color:{fg};'>{count:,}</div></div>",
+                    f"<div style='font-size:1.5rem; font-weight:bold; color:{fg};'>{count:,}</div>"
+                    f"<div style='font-size:0.75rem; color:{fg};'>{count / total_distinct * 100:.1f}%</div></div>",
                     unsafe_allow_html=True,
                 )
                 if st.button(status, key=f"status_filter_{status}", use_container_width=True):
