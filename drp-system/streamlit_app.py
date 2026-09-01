@@ -5,7 +5,9 @@ import pandas as pd
 APP_PASSWORD = "ANZDRP2026"
 
 # Path to CSV data file (works both locally and on Streamlit Cloud)
-DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "drp_data.csv")
+_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_PATH = os.path.join(_DATA_DIR, "drp_data.csv")
+REFRESH_PATH = os.path.join(_DATA_DIR, "last_refresh.txt")
 
 st.set_page_config(
     page_title="DRP System - IMCD ANZ",
@@ -53,7 +55,11 @@ def main():
     """, unsafe_allow_html=True)
 
     st.title("DRP System")
-    st.caption("Distribution Replenishment Planning - IMCD ANZ")
+    refresh_ts = ""
+    if os.path.exists(REFRESH_PATH):
+        with open(REFRESH_PATH, "r") as _f:
+            refresh_ts = _f.read().strip()
+    st.caption(f"Distribution Replenishment Planning - IMCD ANZ | Data refreshed: {refresh_ts}" if refresh_ts else "Distribution Replenishment Planning - IMCD ANZ")
 
     with st.spinner("Loading DRP data from Snowflake..."):
         try:
