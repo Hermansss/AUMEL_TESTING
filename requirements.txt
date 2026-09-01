@@ -1,0 +1,2 @@
+snowflake-connector-python>=3.3.0
+streamlit[snowflake]>=1.54.0
