@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 .env
+refresh_data.py
+refresh_daily.bat
+refresh_log.txt
