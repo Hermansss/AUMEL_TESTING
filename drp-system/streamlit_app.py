@@ -212,11 +212,68 @@ def main():
                         st.session_state["overview_status_filter"] = status
                     st.rerun()
 
-        # Apply overview status filter
+        # --- Inventory Type count cards (clickable filters) ---
+        if "overview_invtype_filter" not in st.session_state:
+            st.session_state["overview_invtype_filter"] = None
+
+        INVTYPE_CARD_COLORS = {
+            "A": ("#DBEAFE", "#1E40AF"),
+            "B": ("#DCFCE7", "#166534"),
+            "M": ("#FEF9C3", "#854D0E"),
+            "R": ("#FFEDD5", "#9A3412"),
+            "S": ("#EDE9FE", "#5B21B6"),
+            "U": ("#F3E8FF", "#6B21A8"),
+        }
+
+        invtype_counts = filtered_df.groupby("INVENTORYTYPE")["PRODUCT_FULL_SEGMENTS_NUMBER"].nunique()
+        present_invtypes = sorted(invtype_counts.index.tolist())
+
+        invtype_cols = st.columns(len(present_invtypes) + 1)
+        with invtype_cols[0]:
+            all_inv_active = st.session_state["overview_invtype_filter"] is None
+            border_style = "border: 2px solid #333;" if all_inv_active else "border: 1px solid #ddd;"
+            st.markdown(
+                f"<div style='text-align:center; padding:8px; border-radius:8px; {border_style} cursor:pointer;'>"
+                f"<div style='font-size:0.8rem; color:#666;'>All Types</div>"
+                f"<div style='font-size:1.5rem; font-weight:bold;'>{total_distinct:,}</div>"
+                f"<div style='font-size:0.75rem; color:#666;'>100%</div></div>",
+                unsafe_allow_html=True,
+            )
+            if st.button("All Types", key="invtype_filter_all", use_container_width=True):
+                st.session_state["overview_invtype_filter"] = None
+                st.rerun()
+
+        for i, inv_type in enumerate(present_invtypes):
+            with invtype_cols[i + 1]:
+                bg, fg = INVTYPE_CARD_COLORS.get(inv_type, ("#F3F4F6", "#374151"))
+                count = int(invtype_counts[inv_type])
+                is_active = st.session_state["overview_invtype_filter"] == inv_type
+                border_style = f"border: 2px solid {fg};" if is_active else "border: 1px solid #ddd;"
+                st.markdown(
+                    f"<div style='text-align:center; padding:8px; border-radius:8px; background:{bg}; {border_style}'>"
+                    f"<div style='font-size:0.8rem; color:{fg};'>{inv_type}</div>"
+                    f"<div style='font-size:1.5rem; font-weight:bold; color:{fg};'>{count:,}</div>"
+                    f"<div style='font-size:0.75rem; color:{fg};'>{count / total_distinct * 100:.1f}%</div></div>",
+                    unsafe_allow_html=True,
+                )
+                if st.button(inv_type, key=f"invtype_filter_{inv_type}", use_container_width=True):
+                    if st.session_state["overview_invtype_filter"] == inv_type:
+                        st.session_state["overview_invtype_filter"] = None
+                    else:
+                        st.session_state["overview_invtype_filter"] = inv_type
+                    st.rerun()
+
+        # Apply overview filters (status + inventory type)
         overview_df = filtered_df
+        active_filters = []
         if st.session_state["overview_status_filter"]:
-            overview_df = filtered_df[filtered_df["STOCK_STATUS"] == st.session_state["overview_status_filter"]]
-            st.info(f"Filtered by: **{st.session_state['overview_status_filter']}** ({len(overview_df):,} rows). Click again or click 'All' to clear.")
+            overview_df = overview_df[overview_df["STOCK_STATUS"] == st.session_state["overview_status_filter"]]
+            active_filters.append(f"Stock Status: **{st.session_state['overview_status_filter']}**")
+        if st.session_state["overview_invtype_filter"]:
+            overview_df = overview_df[overview_df["INVENTORYTYPE"] == st.session_state["overview_invtype_filter"]]
+            active_filters.append(f"Inventory Type: **{st.session_state['overview_invtype_filter']}**")
+        if active_filters:
+            st.info(f"Filtered by: {' | '.join(active_filters)} ({len(overview_df):,} rows). Click again or click 'All' to clear.")
 
         display_cols = [
             "PRODUCT_FULL_SEGMENTS_NUMBER", "PRODUCT_NAME", "PRODUCT_PACKAGE_DESCRIPTION",
