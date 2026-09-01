@@ -4,8 +4,8 @@ import pandas as pd
 
 APP_PASSWORD = "ANZDRP2026"
 
-# URL to CSV in GitHub repo (raw content)
-DATA_URL = "https://raw.githubusercontent.com/Hermansss/ANZDRPTESTING/main/data/drp_data.csv"
+# Path to CSV data file (works both locally and on Streamlit Cloud)
+DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "drp_data.csv")
 
 st.set_page_config(
     page_title="DRP System - IMCD ANZ",
@@ -17,7 +17,7 @@ st.set_page_config(
 
 @st.cache_data(ttl=3600)
 def load_drp_data():
-    df = pd.read_csv(DATA_URL)
+    df = pd.read_csv(DATA_PATH)
     return df
 
 
