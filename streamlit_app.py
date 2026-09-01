@@ -149,6 +149,63 @@ def main():
 
     with tab_overview:
         st.subheader("Inventory Overview")
+
+        # --- Stock Status count cards (clickable filters) ---
+        if "overview_status_filter" not in st.session_state:
+            st.session_state["overview_status_filter"] = None
+
+        status_counts = filtered_df["STOCK_STATUS"].value_counts()
+        status_order = ["Stockout Risk", "Low Stock", "Healthy", "High Stock", "Overstock", "No FCST - Overstock"]
+        present_statuses = [s for s in status_order if s in status_counts.index]
+
+        STATUS_CARD_COLORS = {
+            "Stockout Risk": ("#FEE2E2", "#991B1B"),
+            "Low Stock": ("#FFEDD5", "#9A3412"),
+            "Healthy": ("#DCFCE7", "#166534"),
+            "High Stock": ("#DBEAFE", "#1E40AF"),
+            "Overstock": ("#EDE9FE", "#5B21B6"),
+            "No FCST - Overstock": ("#F3E8FF", "#6B21A8"),
+        }
+
+        status_cols = st.columns(len(present_statuses) + 1)
+        with status_cols[0]:
+            all_active = st.session_state["overview_status_filter"] is None
+            border_style = "border: 2px solid #333;" if all_active else "border: 1px solid #ddd;"
+            st.markdown(
+                f"<div style='text-align:center; padding:8px; border-radius:8px; {border_style} cursor:pointer;'>"
+                f"<div style='font-size:0.8rem; color:#666;'>All</div>"
+                f"<div style='font-size:1.5rem; font-weight:bold;'>{len(filtered_df):,}</div></div>",
+                unsafe_allow_html=True,
+            )
+            if st.button("All", key="status_filter_all", use_container_width=True):
+                st.session_state["overview_status_filter"] = None
+                st.rerun()
+
+        for i, status in enumerate(present_statuses):
+            with status_cols[i + 1]:
+                bg, fg = STATUS_CARD_COLORS.get(status, ("#F3F4F6", "#374151"))
+                count = int(status_counts[status])
+                is_active = st.session_state["overview_status_filter"] == status
+                border_style = f"border: 2px solid {fg};" if is_active else "border: 1px solid #ddd;"
+                st.markdown(
+                    f"<div style='text-align:center; padding:8px; border-radius:8px; background:{bg}; {border_style}'>"
+                    f"<div style='font-size:0.8rem; color:{fg};'>{status}</div>"
+                    f"<div style='font-size:1.5rem; font-weight:bold; color:{fg};'>{count:,}</div></div>",
+                    unsafe_allow_html=True,
+                )
+                if st.button(status, key=f"status_filter_{status}", use_container_width=True):
+                    if st.session_state["overview_status_filter"] == status:
+                        st.session_state["overview_status_filter"] = None
+                    else:
+                        st.session_state["overview_status_filter"] = status
+                    st.rerun()
+
+        # Apply overview status filter
+        overview_df = filtered_df
+        if st.session_state["overview_status_filter"]:
+            overview_df = filtered_df[filtered_df["STOCK_STATUS"] == st.session_state["overview_status_filter"]]
+            st.info(f"Filtered by: **{st.session_state['overview_status_filter']}** ({len(overview_df):,} rows). Click again or click 'All' to clear.")
+
         display_cols = [
             "PRODUCT_FULL_SEGMENTS_NUMBER", "PRODUCT_NAME", "PRODUCT_PACKAGE_DESCRIPTION",
             "COMPANY_COUNTRY", "STATE",
@@ -157,7 +214,7 @@ def main():
             "F_ADU", "SOH_DC", "INTRANSIT_DC", "ONPO_DC", "NAT_PIPELINE_DC", "IDEAL_PIPELINE",
             "ORDER_QTY", "ORDER_AMOUNT", "OVERSTOCK_VALUE", "UNITCOST",
         ]
-        display_df = filtered_df[display_cols].copy()
+        display_df = overview_df[display_cols].copy()
         display_df.columns = [
             "Product #", "Product Name", "Package",
             "Country", "State",
@@ -191,7 +248,7 @@ def main():
                 "Unit Cost": st.column_config.NumberColumn(format="$%.2f"),
             },
         )
-        st.caption(f"Showing {len(display_df):,} rows")
+        st.caption(f"Showing {len(display_df):,} of {len(filtered_df):,} rows")
 
     with tab_orders:
         st.subheader("Order Suggestions")
