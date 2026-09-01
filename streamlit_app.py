@@ -134,13 +134,15 @@ def main():
     total_items = len(filtered_df)
     items_needing_order = (filtered_df["ORDER_QTY"] > 0).sum()
     total_order_value = (filtered_df["ORDER_QTY"] * filtered_df["UNITCOST"]).sum()
+    total_overstock_value = filtered_df["OVERSTOCK_VALUE"].sum() if "OVERSTOCK_VALUE" in filtered_df.columns else 0
     avg_pipeline_dc = filtered_df["NAT_PIPELINE_DC"].mean()
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     col1.metric("Total SKU-State Lines", format_number(total_items))
     col2.metric("Items Needing Order", format_number(items_needing_order))
     col3.metric("Total Order Value", f"${format_number(total_order_value, 0)}")
-    col4.metric("Avg National Pipeline DC", format_number(avg_pipeline_dc, 1) if not pd.isna(avg_pipeline_dc) else "N/A")
+    col4.metric("Overstock Value", f"${format_number(total_overstock_value, 0)}")
+    col5.metric("Avg National Pipeline DC", format_number(avg_pipeline_dc, 1) if not pd.isna(avg_pipeline_dc) else "N/A")
 
     st.divider()
 
