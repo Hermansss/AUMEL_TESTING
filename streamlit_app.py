@@ -423,12 +423,12 @@ def main():
                 ).reset_index()
                 bi_deduped = fix_overstock(bi_deduped)
 
-                detail_tbl = bi_deduped.groupby(["INVENTORYTYPE", "STOCK_STATUS"]).agg(
+                detail_tbl = bi_deduped.groupby(["STOCK_STATUS", "INVENTORYTYPE"]).agg(
                     Products=("PRODUCT_FULL_SEGMENTS_NUMBER", "nunique"),
                     **{"Order Amount": ("ORDER_AMOUNT", "sum")},
                     **{"Overstock Value": ("OVERSTOCK_VALUE", "sum")},
-                ).reset_index().rename(columns={"INVENTORYTYPE": "Inv Type", "STOCK_STATUS": "Stock Status"})
-                detail_tbl = detail_tbl.sort_values(["Inv Type", "Order Amount"], ascending=[True, False])
+                ).reset_index().rename(columns={"STOCK_STATUS": "Stock Status", "INVENTORYTYPE": "Inv Type"})
+                detail_tbl = detail_tbl.sort_values(["Stock Status", "Order Amount"], ascending=[True, False])
                 styled_tbl = detail_tbl.style.map(style_stock_status, subset=["Stock Status"])
                 st.dataframe(styled_tbl, use_container_width=True, hide_index=True, column_config=val_cfg)
 
@@ -465,12 +465,12 @@ def main():
                 ).reset_index()
                 pi_deduped = fix_overstock(pi_deduped)
 
-                pi_detail = pi_deduped.groupby(["INVENTORYTYPE", "STOCK_STATUS"]).agg(
+                pi_detail = pi_deduped.groupby(["STOCK_STATUS", "INVENTORYTYPE"]).agg(
                     Products=("PRODUCT_FULL_SEGMENTS_NUMBER", "nunique"),
                     **{"Order Amount": ("ORDER_AMOUNT", "sum")},
                     **{"Overstock Value": ("OVERSTOCK_VALUE", "sum")},
-                ).reset_index().rename(columns={"INVENTORYTYPE": "Inv Type", "STOCK_STATUS": "Stock Status"})
-                pi_detail = pi_detail.sort_values(["Inv Type", "Order Amount"], ascending=[True, False])
+                ).reset_index().rename(columns={"STOCK_STATUS": "Stock Status", "INVENTORYTYPE": "Inv Type"})
+                pi_detail = pi_detail.sort_values(["Stock Status", "Order Amount"], ascending=[True, False])
                 styled_pi = pi_detail.style.map(style_stock_status, subset=["Stock Status"])
                 st.dataframe(styled_pi, use_container_width=True, hide_index=True, column_config=val_cfg)
 
