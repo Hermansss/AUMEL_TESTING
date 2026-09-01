@@ -215,19 +215,19 @@ def main():
         display_cols = [
             "PRODUCT_FULL_SEGMENTS_NUMBER", "PRODUCT_NAME", "PRODUCT_PACKAGE_DESCRIPTION",
             "COMPANY_COUNTRY", "STATE",
-            "INVENTORYTYPE", "VENDOR_NAME", "STOCK_STATUS",
+            "INVENTORYTYPE", "BUYER_NAME", "STOCK_STATUS",
             "ONHANDQTY", "EXPIREDQTY", "BLOCKEDQTY", "INTRANSITQTY", "ONPOQTY",
             "F_ADU", "SOH_DC", "INTRANSIT_DC", "ONPO_DC", "NAT_PIPELINE_DC", "IDEAL_PIPELINE",
-            "ORDER_QTY", "ORDER_AMOUNT", "OVERSTOCK_VALUE", "UNITCOST",
+            "NAT_NET_POSITION", "ORDER_QTY", "ORDER_AMOUNT", "OVERSTOCK_VALUE",
         ]
         display_df = overview_df[display_cols].copy()
         display_df.columns = [
             "Product #", "Product Name", "Package",
             "Country", "State",
-            "Inv Type", "Vendor", "Stock Status",
+            "Inv Type", "Buyer", "Stock Status",
             "On Hand", "Expired", "Blocked", "In Transit", "On PO",
             "Fcst ADU", "SOH DC", "Intransit DC", "On PO DC", "Nat Pipeline DC", "Ideal Pipeline",
-            "Suggested Order", "Order Amount", "Overstock Value", "Unit Cost",
+            "Nat Net Position", "Suggested Order", "Order Amount", "Overstock Value",
         ]
 
         styled_overview = display_df.style.map(style_stock_status, subset=["Stock Status"])
@@ -248,10 +248,10 @@ def main():
                 "On PO DC": st.column_config.NumberColumn(format="%.1f"),
                 "Nat Pipeline DC": st.column_config.NumberColumn(format="%.1f"),
                 "Ideal Pipeline": st.column_config.NumberColumn(format="%.0f"),
+                "Nat Net Position": st.column_config.NumberColumn(format="%.0f"),
                 "Suggested Order": st.column_config.NumberColumn(format="%.0f"),
                 "Order Amount": st.column_config.NumberColumn(format="$%,.0f"),
                 "Overstock Value": st.column_config.NumberColumn(format="$%,.0f"),
-                "Unit Cost": st.column_config.NumberColumn(format="$%.2f"),
             },
         )
         st.caption(f"Showing {len(display_df):,} of {len(filtered_df):,} rows")
