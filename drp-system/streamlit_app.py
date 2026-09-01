@@ -178,7 +178,8 @@ def main():
             st.markdown(
                 f"<div style='text-align:center; padding:8px; border-radius:8px; {border_style} cursor:pointer;'>"
                 f"<div style='font-size:0.8rem; color:#666;'>All</div>"
-                f"<div style='font-size:1.5rem; font-weight:bold;'>{total_distinct:,}</div></div>",
+                f"<div style='font-size:1.5rem; font-weight:bold;'>{total_distinct:,}</div>"
+                f"<div style='font-size:0.75rem; color:#666;'>100%</div></div>",
                 unsafe_allow_html=True,
             )
             if st.button("All", key="status_filter_all", use_container_width=True):
