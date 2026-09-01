@@ -156,7 +156,7 @@ def main():
         if "overview_status_filter" not in st.session_state:
             st.session_state["overview_status_filter"] = None
 
-        status_counts = filtered_df["STOCK_STATUS"].value_counts()
+        status_counts = filtered_df.groupby("STOCK_STATUS")["PRODUCT_FULL_SEGMENTS_NUMBER"].nunique()
         status_order = ["Stockout Risk", "Low Stock", "Healthy", "High Stock", "Overstock", "No FCST - Overstock"]
         present_statuses = [s for s in status_order if s in status_counts.index]
 
@@ -176,7 +176,7 @@ def main():
             st.markdown(
                 f"<div style='text-align:center; padding:8px; border-radius:8px; {border_style} cursor:pointer;'>"
                 f"<div style='font-size:0.8rem; color:#666;'>All</div>"
-                f"<div style='font-size:1.5rem; font-weight:bold;'>{len(filtered_df):,}</div></div>",
+                f"<div style='font-size:1.5rem; font-weight:bold;'>{filtered_df['PRODUCT_FULL_SEGMENTS_NUMBER'].nunique():,}</div></div>",
                 unsafe_allow_html=True,
             )
             if st.button("All", key="status_filter_all", use_container_width=True):
