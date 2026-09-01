@@ -50,7 +50,10 @@ def main():
     # Reduce default top padding to move content up
     st.markdown("""
         <style>
-            .block-container { padding-top: 1rem; }
+            .block-container { padding-top: 1rem; padding-bottom: 0; }
+            [data-testid="stMetric"] { padding-bottom: 0; }
+            [data-testid="stHorizontalBlock"] { gap: 0.5rem; }
+            .stTabs { margin-top: -1rem; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -149,8 +152,6 @@ def main():
     col3.metric("Total Order Value", f"${format_number(total_order_value, 0)}")
     col4.metric("Overstock Value", f"${format_number(total_overstock_value, 0)}")
     col5.metric("Avg National Pipeline DC", format_number(avg_pipeline_dc, 1) if not pd.isna(avg_pipeline_dc) else "N/A")
-
-    st.divider()
 
     # --- Tabs ---
     tab_overview, tab_orders, tab_stock, tab_detail = st.tabs(["Overview", "Order Suggestions", "Stock Level Analysis", "Product Detail"])
