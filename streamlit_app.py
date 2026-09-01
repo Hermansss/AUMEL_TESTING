@@ -416,38 +416,21 @@ def main():
             with st.expander(label):
                 buyer_data = adf[adf["BUYER_NAME"] == buyer]
 
-                # Deduplicate: one row per product per inv type
-                bi_deduped = buyer_data.groupby(["INVENTORYTYPE", "PRODUCT_FULL_SEGMENTS_NUMBER"]).agg(
-                    STOCK_STATUS=("STOCK_STATUS", "first"),
+                # Group by Inv Type + Stock Status
+                bi_deduped = buyer_data.groupby(["INVENTORYTYPE", "STOCK_STATUS", "PRODUCT_FULL_SEGMENTS_NUMBER"]).agg(
                     ORDER_AMOUNT=("ORDER_AMOUNT", "sum"),
                     OVERSTOCK_VALUE=("OVERSTOCK_VALUE", "sum"),
                 ).reset_index()
                 bi_deduped = fix_overstock(bi_deduped)
 
-                inv_summary = bi_deduped.groupby("INVENTORYTYPE").agg(
+                detail_tbl = bi_deduped.groupby(["INVENTORYTYPE", "STOCK_STATUS"]).agg(
                     Products=("PRODUCT_FULL_SEGMENTS_NUMBER", "nunique"),
-                    Order_Amount=("ORDER_AMOUNT", "sum"),
-                    Overstock_Value=("OVERSTOCK_VALUE", "sum"),
-                ).reset_index().sort_values("Order_Amount", ascending=False)
-
-                for _, irow in inv_summary.iterrows():
-                    inv_type = irow["INVENTORYTYPE"]
-                    i_products = int(irow["Products"])
-                    i_order = fmt_dollar(irow["Order_Amount"])
-                    i_overstock = fmt_dollar(irow["Overstock_Value"])
-                    i_label = f"**{inv_type}**  |  Products: {i_products:,}  |  :blue[Order Amount: **{i_order}**]  |  :orange[Overstock Value: **{i_overstock}**]"
-
-                    with st.expander(i_label):
-                        # Stock status breakdown within this buyer + inv type
-                        inv_data = bi_deduped[bi_deduped["INVENTORYTYPE"] == inv_type]
-                        status_tbl = inv_data.groupby("STOCK_STATUS").agg(
-                            Products=("PRODUCT_FULL_SEGMENTS_NUMBER", "nunique"),
-                            **{"Order Amount": ("ORDER_AMOUNT", "sum")},
-                            **{"Overstock Value": ("OVERSTOCK_VALUE", "sum")},
-                        ).reset_index().rename(columns={"STOCK_STATUS": "Stock Status"})
-                        status_tbl = status_tbl.sort_values("Order Amount", ascending=False)
-                        styled_tbl = status_tbl.style.map(style_stock_status, subset=["Stock Status"])
-                        st.dataframe(styled_tbl, use_container_width=True, hide_index=True, column_config=val_cfg)
+                    **{"Order Amount": ("ORDER_AMOUNT", "sum")},
+                    **{"Overstock Value": ("OVERSTOCK_VALUE", "sum")},
+                ).reset_index().rename(columns={"INVENTORYTYPE": "Inv Type", "STOCK_STATUS": "Stock Status"})
+                detail_tbl = detail_tbl.sort_values(["Inv Type", "Order Amount"], ascending=[True, False])
+                styled_tbl = detail_tbl.style.map(style_stock_status, subset=["Stock Status"])
+                st.dataframe(styled_tbl, use_container_width=True, hide_index=True, column_config=val_cfg)
 
         st.divider()
 
@@ -476,36 +459,20 @@ def main():
             with st.expander(pm_label):
                 pm_data = adf[adf["LOCAL_PRODUCTMANAGER_NAME"] == pm_name]
 
-                pi_deduped = pm_data.groupby(["INVENTORYTYPE", "PRODUCT_FULL_SEGMENTS_NUMBER"]).agg(
-                    STOCK_STATUS=("STOCK_STATUS", "first"),
+                pi_deduped = pm_data.groupby(["INVENTORYTYPE", "STOCK_STATUS", "PRODUCT_FULL_SEGMENTS_NUMBER"]).agg(
                     ORDER_AMOUNT=("ORDER_AMOUNT", "sum"),
                     OVERSTOCK_VALUE=("OVERSTOCK_VALUE", "sum"),
                 ).reset_index()
                 pi_deduped = fix_overstock(pi_deduped)
 
-                pi_summary = pi_deduped.groupby("INVENTORYTYPE").agg(
+                pi_detail = pi_deduped.groupby(["INVENTORYTYPE", "STOCK_STATUS"]).agg(
                     Products=("PRODUCT_FULL_SEGMENTS_NUMBER", "nunique"),
-                    Order_Amount=("ORDER_AMOUNT", "sum"),
-                    Overstock_Value=("OVERSTOCK_VALUE", "sum"),
-                ).reset_index().sort_values("Order_Amount", ascending=False)
-
-                for _, pirow in pi_summary.iterrows():
-                    pi_type = pirow["INVENTORYTYPE"]
-                    pi_products = int(pirow["Products"])
-                    pi_order = fmt_dollar(pirow["Order_Amount"])
-                    pi_overstock = fmt_dollar(pirow["Overstock_Value"])
-                    pi_label = f"**{pi_type}**  |  Products: {pi_products:,}  |  :blue[Order Amount: **{pi_order}**]  |  :orange[Overstock Value: **{pi_overstock}**]"
-
-                    with st.expander(pi_label):
-                        pi_data = pi_deduped[pi_deduped["INVENTORYTYPE"] == pi_type]
-                        pi_status_tbl = pi_data.groupby("STOCK_STATUS").agg(
-                            Products=("PRODUCT_FULL_SEGMENTS_NUMBER", "nunique"),
-                            **{"Order Amount": ("ORDER_AMOUNT", "sum")},
-                            **{"Overstock Value": ("OVERSTOCK_VALUE", "sum")},
-                        ).reset_index().rename(columns={"STOCK_STATUS": "Stock Status"})
-                        pi_status_tbl = pi_status_tbl.sort_values("Order Amount", ascending=False)
-                        styled_pi = pi_status_tbl.style.map(style_stock_status, subset=["Stock Status"])
-                        st.dataframe(styled_pi, use_container_width=True, hide_index=True, column_config=val_cfg)
+                    **{"Order Amount": ("ORDER_AMOUNT", "sum")},
+                    **{"Overstock Value": ("OVERSTOCK_VALUE", "sum")},
+                ).reset_index().rename(columns={"INVENTORYTYPE": "Inv Type", "STOCK_STATUS": "Stock Status"})
+                pi_detail = pi_detail.sort_values(["Inv Type", "Order Amount"], ascending=[True, False])
+                styled_pi = pi_detail.style.map(style_stock_status, subset=["Stock Status"])
+                st.dataframe(styled_pi, use_container_width=True, hide_index=True, column_config=val_cfg)
 
     with tab_detail:
         st.subheader("Product Detail Lookup")
