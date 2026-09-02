@@ -621,10 +621,16 @@ def main():
         ).reset_index().sort_values("ONHAND_VALUE", ascending=False)
         country_val = country_val.round(0)
 
-        kv1, kv2 = st.columns(2)
-        for i, row in enumerate(country_val.itertuples()):
-            col = kv1 if i == 0 else kv2
-            col.metric(row.COMPANY_COUNTRY, f"${row.ONHAND_VALUE:,.0f}")
+        for _, crow in country_val.iterrows():
+            c_name = crow["COMPANY_COUNTRY"]
+            with st.container():
+                st.markdown(f"**{c_name}**")
+                mc1, mc2, mc3, mc4 = st.columns(4)
+                mc1.metric("On Hand", f"${crow['ONHAND_VALUE']:,.0f}")
+                mc2.metric("In Transit", f"${crow['INTRANSIT_VALUE']:,.0f}")
+                mc3.metric("On PO", f"${crow['ONPO_VALUE']:,.0f}")
+                pipeline = crow["ONHAND_VALUE"] + crow["INTRANSIT_VALUE"] + crow["ONPO_VALUE"]
+                mc4.metric("Pipeline Value", f"${pipeline:,.0f}")
 
         chart_melt_country = country_val.melt(
             id_vars="COMPANY_COUNTRY",
