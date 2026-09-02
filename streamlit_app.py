@@ -154,7 +154,7 @@ def main():
     col5.metric("Avg National Pipeline DC", format_number(avg_pipeline_dc, 1) if not pd.isna(avg_pipeline_dc) else "N/A")
 
     # --- Tabs ---
-    tab_overview, tab_orders, tab_stock, tab_detail = st.tabs(["Overview", "Order Suggestions", "Stock Level Analysis", "Product Detail"])
+    tab_overview, tab_orders, tab_stock, tab_analytics, tab_detail = st.tabs(["Overview", "Order Suggestions", "Stock Level Analysis", "Inventory Analytics", "Product Detail"])
 
     with tab_overview:
         st.subheader("Inventory Overview")
@@ -600,6 +600,123 @@ def main():
                 pi_detail = pi_detail.sort_values(["Stock Status", "Order Amount"], ascending=[True, False])
                 styled_pi = pi_detail.style.map(style_stock_status, subset=["Stock Status"])
                 st.dataframe(styled_pi, use_container_width=True, hide_index=True, column_config=val_cfg)
+
+    with tab_analytics:
+        st.subheader("Inventory Analytics (by Value)")
+
+        vdf = filtered_df.copy()
+        vdf["ONHAND_VALUE"] = (vdf["ONHANDQTY"] - vdf["EXPIREDQTY"] - vdf["BLOCKEDQTY"]) * vdf["UNITCOST"]
+        vdf["INTRANSIT_VALUE"] = vdf["INTRANSITQTY"] * vdf["UNITCOST"]
+        vdf["ONPO_VALUE"] = vdf["ONPOQTY"] * vdf["UNITCOST"]
+        vdf["OUTBOUND_VALUE"] = (vdf["Q_SO"] + vdf["Q_SB"]) * vdf["UNITCOST"]
+        vdf["ADU_VALUE"] = vdf["F_ADU"] * vdf["UNITCOST"]
+
+        # --- 1. On-Hand Value by Country (bar chart) ---
+        st.markdown("#### 1. On-Hand Value by Country")
+        country_val = vdf.groupby("COMPANY_COUNTRY").agg(
+            ONHAND_VALUE=("ONHAND_VALUE", "sum"),
+        ).reset_index().sort_values("ONHAND_VALUE", ascending=False)
+        country_val["ONHAND_VALUE"] = country_val["ONHAND_VALUE"].round(0)
+
+        kv1, kv2 = st.columns(2)
+        for i, row in enumerate(country_val.itertuples()):
+            col = kv1 if i == 0 else kv2
+            col.metric(row.COMPANY_COUNTRY, f"${row.ONHAND_VALUE:,.0f}")
+
+        st.bar_chart(
+            country_val.set_index("COMPANY_COUNTRY"),
+            y="ONHAND_VALUE",
+            color="#1E40AF",
+            use_container_width=True,
+        )
+
+        st.divider()
+
+        # --- 2. Days Cover by Country & Buyer (value-weighted) ---
+        st.markdown("#### 2. Days Cover by Country & Buyer (Value-Weighted)")
+        st.caption("Days Cover = Total On-Hand Value / Daily ADU Value")
+
+        buyer_dc = vdf.groupby(["COMPANY_COUNTRY", "BUYER_NAME"]).agg(
+            ONHAND_VALUE=("ONHAND_VALUE", "sum"),
+            ADU_VALUE=("ADU_VALUE", "sum"),
+        ).reset_index()
+        buyer_dc["DAYS_COVER"] = (buyer_dc["ONHAND_VALUE"] / buyer_dc["ADU_VALUE"].replace(0, float("nan"))).round(1)
+        buyer_dc = buyer_dc.sort_values("ONHAND_VALUE", ascending=False)
+
+        for country in sorted(buyer_dc["COMPANY_COUNTRY"].dropna().unique()):
+            st.markdown(f"**{country}**")
+            cdf = buyer_dc[buyer_dc["COMPANY_COUNTRY"] == country].copy()
+            cdf = cdf[["BUYER_NAME", "ONHAND_VALUE", "ADU_VALUE", "DAYS_COVER"]].sort_values("ONHAND_VALUE", ascending=False)
+            cdf.columns = ["Buyer", "On-Hand Value", "Daily ADU Value", "Days Cover"]
+            st.dataframe(
+                cdf,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "On-Hand Value": st.column_config.NumberColumn(format="$%,.0f"),
+                    "Daily ADU Value": st.column_config.NumberColumn(format="$%,.2f"),
+                    "Days Cover": st.column_config.NumberColumn(format="%.1f"),
+                },
+            )
+
+            chart_data = cdf[["Buyer", "Days Cover"]].dropna().set_index("Buyer").sort_values("Days Cover", ascending=True)
+            if not chart_data.empty:
+                st.bar_chart(chart_data, y="Days Cover", color="#854D0E", horizontal=True, use_container_width=True)
+
+        st.divider()
+
+        # --- 3. Inventory Position Breakdown by Value ---
+        st.markdown("#### 3. Inventory Position Breakdown (by Value)")
+
+        pos_country = vdf.groupby("COMPANY_COUNTRY").agg(
+            **{"On Hand": ("ONHAND_VALUE", "sum")},
+            **{"In Transit": ("INTRANSIT_VALUE", "sum")},
+            **{"On PO": ("ONPO_VALUE", "sum")},
+            **{"Outbound (SO+SB)": ("OUTBOUND_VALUE", "sum")},
+        ).reset_index()
+
+        for _, row in pos_country.iterrows():
+            st.markdown(f"**{row['COMPANY_COUNTRY']}**")
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("On Hand", f"${row['On Hand']:,.0f}")
+            m2.metric("In Transit", f"${row['In Transit']:,.0f}")
+            m3.metric("On PO", f"${row['On PO']:,.0f}")
+            m4.metric("Outbound (SO+SB)", f"${row['Outbound (SO+SB)']:,.0f}")
+
+        st.markdown("**By Buyer**")
+        pos_buyer = vdf.groupby(["COMPANY_COUNTRY", "BUYER_NAME"]).agg(
+            **{"On Hand": ("ONHAND_VALUE", "sum")},
+            **{"In Transit": ("INTRANSIT_VALUE", "sum")},
+            **{"On PO": ("ONPO_VALUE", "sum")},
+            **{"Outbound": ("OUTBOUND_VALUE", "sum")},
+        ).reset_index().rename(columns={"COMPANY_COUNTRY": "Country", "BUYER_NAME": "Buyer"})
+        pos_buyer["Total Pipeline"] = pos_buyer["On Hand"] + pos_buyer["In Transit"] + pos_buyer["On PO"]
+        pos_buyer = pos_buyer.sort_values("Total Pipeline", ascending=False)
+
+        st.dataframe(
+            pos_buyer,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "On Hand": st.column_config.NumberColumn(format="$%,.0f"),
+                "In Transit": st.column_config.NumberColumn(format="$%,.0f"),
+                "On PO": st.column_config.NumberColumn(format="$%,.0f"),
+                "Outbound": st.column_config.NumberColumn(format="$%,.0f"),
+                "Total Pipeline": st.column_config.NumberColumn(format="$%,.0f"),
+            },
+        )
+
+        # Stacked bar chart: position breakdown by buyer (top 15)
+        top_buyers = pos_buyer.head(15).copy()
+        chart_melt = top_buyers.melt(
+            id_vars=["Buyer"],
+            value_vars=["On Hand", "In Transit", "On PO", "Outbound"],
+            var_name="Category",
+            value_name="Value",
+        )
+        chart_pivot = chart_melt.pivot_table(index="Buyer", columns="Category", values="Value", aggfunc="sum").fillna(0)
+        chart_pivot = chart_pivot.loc[top_buyers["Buyer"].values]
+        st.bar_chart(chart_pivot, use_container_width=True)
 
     with tab_detail:
         st.subheader("Product Detail Lookup")
