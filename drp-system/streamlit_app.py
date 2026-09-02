@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 APP_PASSWORD = "ANZDRP2026"
 
@@ -625,12 +626,40 @@ def main():
             col = kv1 if i == 0 else kv2
             col.metric(row.COMPANY_COUNTRY, f"${row.ONHAND_VALUE:,.0f}")
 
-        chart_country = country_val.set_index("COMPANY_COUNTRY")[["ONPO_VALUE", "INTRANSIT_VALUE", "ONHAND_VALUE"]].rename(columns={
-            "ONPO_VALUE": "On PO",
-            "INTRANSIT_VALUE": "In Transit",
+        chart_melt_country = country_val.melt(
+            id_vars="COMPANY_COUNTRY",
+            value_vars=["ONHAND_VALUE", "INTRANSIT_VALUE", "ONPO_VALUE"],
+            var_name="Category",
+            value_name="Value",
+        )
+        chart_melt_country["Category"] = chart_melt_country["Category"].map({
             "ONHAND_VALUE": "On Hand",
+            "INTRANSIT_VALUE": "In Transit",
+            "ONPO_VALUE": "On PO",
         })
-        st.bar_chart(chart_country, use_container_width=True, stack=True, color=["#F5A623", "#7FB3D8", "#1E3A5F"])
+        chart_melt_country["Label"] = chart_melt_country["Value"].apply(lambda v: f"${v/1e6:.1f}M")
+        cat_order = ["On Hand", "In Transit", "On PO"]
+        color_scale = alt.Scale(domain=cat_order, range=["#1E3A5F", "#7FB3D8", "#F5A623"])
+        bars = alt.Chart(chart_melt_country).mark_bar().encode(
+            x=alt.X("COMPANY_COUNTRY:N", title=None, axis=alt.Axis(labelAngle=0)),
+            y=alt.Y("Value:Q", title="Value ($)", stack="zero"),
+            color=alt.Color("Category:N", scale=color_scale, sort=cat_order, title="Category"),
+            order=alt.Order("cat_order:Q"),
+        )
+        chart_melt_country["cat_order"] = chart_melt_country["Category"].map({c: i for i, c in enumerate(cat_order)})
+        text = alt.Chart(chart_melt_country).mark_text(fontSize=13, fontWeight="bold", color="white").encode(
+            x=alt.X("COMPANY_COUNTRY:N"),
+            y=alt.Y("mid:Q", stack=None),
+            text="Label:N",
+            order=alt.Order("cat_order:Q"),
+        ).transform_window(
+            cumsum="sum(Value)",
+            sort=[{"field": "cat_order"}],
+            groupby=["COMPANY_COUNTRY"],
+        ).transform_calculate(
+            mid="datum.cumsum - datum.Value / 2"
+        )
+        st.altair_chart(bars + text, use_container_width=True)
 
         st.divider()
 
