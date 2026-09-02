@@ -612,23 +612,25 @@ def main():
         vdf["ADU_VALUE"] = vdf["F_ADU"] * vdf["UNITCOST"]
 
         # --- 1. On-Hand Value by Country (bar chart) ---
-        st.markdown("#### 1. On-Hand Value by Country")
+        st.markdown("#### 1. Inventory Value by Country")
         country_val = vdf.groupby("COMPANY_COUNTRY").agg(
             ONHAND_VALUE=("ONHAND_VALUE", "sum"),
+            INTRANSIT_VALUE=("INTRANSIT_VALUE", "sum"),
+            ONPO_VALUE=("ONPO_VALUE", "sum"),
         ).reset_index().sort_values("ONHAND_VALUE", ascending=False)
-        country_val["ONHAND_VALUE"] = country_val["ONHAND_VALUE"].round(0)
+        country_val = country_val.round(0)
 
         kv1, kv2 = st.columns(2)
         for i, row in enumerate(country_val.itertuples()):
             col = kv1 if i == 0 else kv2
             col.metric(row.COMPANY_COUNTRY, f"${row.ONHAND_VALUE:,.0f}")
 
-        st.bar_chart(
-            country_val.set_index("COMPANY_COUNTRY"),
-            y="ONHAND_VALUE",
-            color="#1E40AF",
-            use_container_width=True,
-        )
+        chart_country = country_val.set_index("COMPANY_COUNTRY").rename(columns={
+            "ONHAND_VALUE": "On Hand",
+            "INTRANSIT_VALUE": "In Transit",
+            "ONPO_VALUE": "On PO",
+        })
+        st.bar_chart(chart_country, use_container_width=True, stack=True)
 
         st.divider()
 
