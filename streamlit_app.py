@@ -625,10 +625,10 @@ def main():
             col = kv1 if i == 0 else kv2
             col.metric(row.COMPANY_COUNTRY, f"${row.ONHAND_VALUE:,.0f}")
 
-        chart_country = country_val.set_index("COMPANY_COUNTRY").rename(columns={
-            "ONHAND_VALUE": "On Hand",
-            "INTRANSIT_VALUE": "In Transit",
+        chart_country = country_val.set_index("COMPANY_COUNTRY")[["ONPO_VALUE", "INTRANSIT_VALUE", "ONHAND_VALUE"]].rename(columns={
             "ONPO_VALUE": "On PO",
+            "INTRANSIT_VALUE": "In Transit",
+            "ONHAND_VALUE": "On Hand",
         })
         st.bar_chart(chart_country, use_container_width=True, stack=True)
 
