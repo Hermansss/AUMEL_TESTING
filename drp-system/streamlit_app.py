@@ -18,8 +18,17 @@ st.set_page_config(
 )
 
 
-@st.cache_data(ttl=3600)
-def load_drp_data():
+def _get_refresh_timestamp():
+    """Return the content of last_refresh.txt (or file mtime as fallback)."""
+    try:
+        with open(REFRESH_PATH, "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return str(os.path.getmtime(DATA_PATH))
+
+
+@st.cache_data(ttl=86400)
+def load_drp_data(_refresh_ts: str):
     df = pd.read_csv(DATA_PATH)
     return df
 
@@ -67,7 +76,7 @@ def main():
 
     with st.spinner("Loading DRP data from Snowflake..."):
         try:
-            df = load_drp_data()
+            df = load_drp_data(_get_refresh_timestamp())
         except Exception as e:
             st.error(f"Failed to load data: {e}")
             return
@@ -79,6 +88,7 @@ def main():
     # --- Sidebar Filters ---
     with st.sidebar:
         st.header("Filters")
+        st.caption(f"Data refreshed: {_get_refresh_timestamp()}")
 
         countries = sorted(df["COMPANY_COUNTRY"].dropna().unique().tolist())
         sel_country = st.multiselect("Country", countries, default=countries)
